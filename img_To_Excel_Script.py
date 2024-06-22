@@ -14,15 +14,13 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
 def input_image_setup(file_location, type='image/jpeg'):
-    # Check if the file location is valid
     if file_location:
-            # Open the file in binary mode and read it into bytes
         with open(file_location, 'rb') as f:
                 bytes_data = f.read()
         print("Data Extraction Started..")
         image_parts = [
                 {
-                    "mime_type": type,  # Get the mime type of the uploaded file
+                    "mime_type": type,  
                     "data": bytes_data
                 }
             ]
@@ -61,11 +59,10 @@ def process(list_a):
 
 
 def data_to_xlsx(data, columns, filename):
-    # Create a pandas DataFrame from the data
+
     print("Creating Excel...")
     df = pd.DataFrame(data, columns=columns)
     # print(df)
-    # Create a new workbook and select the active worksheet
     workbook = openpyxl.Workbook()
     sheet = workbook.active
 
@@ -78,7 +75,6 @@ def data_to_xlsx(data, columns, filename):
         for col_num, value in enumerate(row_data, 1):
             sheet.cell(row=row_num, column=col_num, value=value)
 
-    # Save the workbook to a file
     workbook.save(filename)
 
 if __name__ == "__main__":
