@@ -17,7 +17,7 @@ def data_to_xlsx(df, columns, filename):
     # Check for consecutive columns with the same value
     for col in range(len(df.columns) - 1):
         for index, row in df.iterrows():
-            if row[col] != 'P.O.A' or row[col]!='P.0.A' or row[col]!='P.0.A.':
+            if row[col] != 'P.O.A' and row[col]!='P.0.A' and row[col]!='P.0.A.':
                 if row[col] is not None and (not row[col].replace('$', '').replace('.', '', 1).isdigit()):
                     if col + 1 < len(row):
                         if row[col] == row[col + 1]:
