@@ -187,8 +187,6 @@ def Image_to_xlsx(src, output_folder):
         else:
             columns = False
         
-        # if "FINISH" in df.columns:
-        #     df = split_finish_column(df) 
         
         
 
