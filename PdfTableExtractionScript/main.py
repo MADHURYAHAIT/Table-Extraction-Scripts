@@ -10,6 +10,7 @@ import time
 import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
+
 # Define a function to convert PDF to images
 def pdf_to_Img(foldername, location):
     print("\033[92m[INFO] Starting image conversion...\033[0m")
@@ -50,6 +51,26 @@ def pdf_to_Img(foldername, location):
     doc.close()
     print("\033[92m[INFO] Image conversion completed!\033[0m")
 
+# Splits the column with group values.
+def split_finish_column(df):
+    print("Splitting FINISH column...")
+    new_df = pd.DataFrame(columns=df.columns)
+
+    for index, row in df.iterrows():
+        # Check if the "FINISH" column value is not None
+        if pd.notna(row['FINISH']):
+            finish_values = [x.strip() for x in row['FINISH'].split(',') if x.strip()]
+            for finish_value in finish_values:
+                new_row = row.copy()
+                new_row['FINISH'] = finish_value
+                new_row_df = pd.DataFrame([new_row])
+                new_df = pd.concat([new_df, new_row_df], ignore_index=True)
+        else:
+            new_row_df = pd.DataFrame([row])
+            new_df = pd.concat([new_df, new_row_df], ignore_index=True)
+
+    return new_df
+
 
 # Define a function to convert a DataFrame to an XLSX file
 def df_to_xlsx(df, columns, filename):
@@ -58,6 +79,9 @@ def df_to_xlsx(df, columns, filename):
     if columns and len(columns) == df.shape[1]:
         df.columns = columns
         dr+=1
+        
+    if "FINISH" in df.columns:
+        df = split_finish_column(df)
         
     # Check for rows where all columns have the same value 
     for index, row in df.iterrows():
@@ -86,6 +110,10 @@ def df_to_xlsx(df, columns, filename):
     if dr!=0:
         df.drop(index=0, inplace=True)  # Drop the first row
     
+    # if "FINISH" in df.columns:
+    #     print("Working on splitting columns...")
+    #     print(df)
+    #     df = split_finish_column(df)
     try:
         with pd.ExcelWriter(filename) as writer:
             df.to_excel(writer, index=False)
@@ -149,7 +177,7 @@ def Image_to_xlsx(src, output_folder):
     for table in extracted_tables:
         df = table.df
         print(f"\033[92m[INFO] Processing table {table_count} of {len(extracted_tables)}\033[0m")
-
+        # Call split_finish_column for each table
         # Check if the first column is consistent, if so, use it as column names
         if (df[0][0] == df[1][0]!= None):
             if '\n' in df[0][0]:
@@ -158,6 +186,11 @@ def Image_to_xlsx(src, output_folder):
                 columns = [df[0][0]] + [None] * (len(df.columns) - 1)
         else:
             columns = False
+        
+        # if "FINISH" in df.columns:
+        #     df = split_finish_column(df) 
+        
+        
 
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
