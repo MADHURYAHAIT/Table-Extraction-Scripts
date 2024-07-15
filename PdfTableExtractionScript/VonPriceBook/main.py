@@ -173,7 +173,7 @@ def Image_to_xlsx(src, output_folder):
         print(f"\033[92m[INFO] Processing table {table_count} of {len(extracted_tables)}\033[0m")
         # Call split_finish_column for each table
         # Check if the first column is consistent, if so, use it as column names
-        if (df[0][0] == df[1][0]!= None):
+        if len(df) > 1 and df.iloc[0, 0] == df.iloc[1, 0] and df.iloc[0, 0] is not None:
             if '\n' in df[0][0]:
                 columns = (df[0][0]).split('\n')
             else:
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     # variables
     image_folder = 'images'
     output_folder='output'
-    input_file='.Input/Von Price Book Feb 13 to Jun 23.pdf'
+    input_file='./Input/Von Price Book Feb 13 to Jun 23.pdf'
 
     print("\033[94m[INFO] Starting script execution...\033[0m")
     start_time = time.time()
