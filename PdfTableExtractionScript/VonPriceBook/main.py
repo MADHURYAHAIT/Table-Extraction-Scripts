@@ -10,54 +10,45 @@ import time
 import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
+def pdf_to_img_folder(pdf_location, img_folder):
+    print("\033[92m[INFO] Converting PDF to images...\033[0m")
+    if not os.path.exists(img_folder):
+        os.makedirs(img_folder)
 
-# Define a function to convert PDF to images
-def pdf_to_Img(foldername, location):
-    print("\033[92m[INFO] Starting image conversion...\033[0m")
-    image_folder = foldername
-    if not os.path.exists(image_folder):
-        os.makedirs(image_folder)
-
-    # Open the PDF file
     try:
-        doc = fitz.open(location)
-        print(f"\033[92m[INFO] Opened PDF file: {location}\033[0m")
+        pdf_doc = fitz.open(pdf_location)
+        print(f"\033[92m[INFO] Opened PDF file: {pdf_location}\033[0m")
     except Exception as e:
         print(f"\033[91m[ERROR] Unable to open PDF file: {e}\033[0m")
         return
 
-    # Iterate over each page
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        print(f"\033[92m[INFO] Processing page {page_num+1} of {len(doc)}\033[0m")
-        # Set the matrix to scale up the image to 400 dpi
-        zoom_matrix = fitz.Matrix(4, 4)  # 4x4 matrix, scales up by 3 in both x and y directions
-        # Render the page to an image
+    for page_num in range(len(pdf_doc)):
+        page = pdf_doc[page_num]
+        print(f"\033[92m[INFO] Processing page {page_num+1} of {len(pdf_doc)}\033[0m")
+        zoom_matrix = fitz.Matrix(4, 4)
         try:
-            image = page.get_pixmap(matrix=zoom_matrix)
+            page_img = page.get_pixmap(matrix=zoom_matrix)
             print(f"\033[92m[INFO] Rendered page {page_num+1} to image\033[0m")
         except Exception as e:
             print(f"\033[91m[ERROR] Unable to render page to image: {e}\033[0m")
             continue
 
-        # Save the image to a file in the image folder
+        img_path = os.path.join(img_folder, f'page_{page_num+1}.png')
         try:
-            image.save(os.path.join(image_folder, f'page_{page_num+1}.png'))
-            print(f"\033[92m[INFO] Saved image to: {os.path.join(image_folder, f'page_{page_num+1}.png')}\033[0m")
+            page_img.save(img_path)
+            print(f"\033[92m[INFO] Saved image to: {img_path}\033[0m")
         except Exception as e:
             print(f"\033[91m[ERROR] Unable to save image: {e}\033[0m")
             continue
 
-    doc.close()
+    pdf_doc.close()
     print("\033[92m[INFO] Image conversion completed!\033[0m")
 
-# Splits the column with group values.
 def split_finish_column(df):
     print("Splitting FINISH column...")
     new_df = pd.DataFrame(columns=df.columns)
 
     for index, row in df.iterrows():
-        # Check if the "FINISH" column value is not None
         if pd.notna(row['FINISH']):
             finish_values = [x.strip() for x in row['FINISH'].split(',') if x.strip()]
             for finish_value in finish_values:
@@ -71,8 +62,6 @@ def split_finish_column(df):
 
     return new_df
 
-
-# Define a function to convert a DataFrame to an XLSX file
 def df_to_xlsx(df, columns, filename):
     print("\033[92m[INFO] Starting XLSX conversion...\033[0m")
     dr=0
@@ -91,6 +80,7 @@ def df_to_xlsx(df, columns, filename):
     # Check for consecutive columns with the same value
     for col in range(len(df.columns) - 1):
         for index, row in df.iterrows():
+            if row[col] != 'P.O.A' and row[col]!='P.0.A' and row[col]!='P.0.A.':
                 if row[col] is not None and (not row[col].replace('$', '').replace('.', '', 1).isdigit()):
                     if col + 1 < len(row):
                         if row[col] == row[col + 1]:
@@ -104,10 +94,10 @@ def df_to_xlsx(df, columns, filename):
                     if col + 4 < len(row):
                         if row[col] == row[col + 4]:
                             df.iloc[index, col + 4] = None
-             
-    
+
     if dr!=0:
         df.drop(index=0, inplace=True)  # Drop the first row
+    
     try:
         with pd.ExcelWriter(filename) as writer:
             df.to_excel(writer, index=False)
@@ -116,47 +106,41 @@ def df_to_xlsx(df, columns, filename):
         print(f"\033[91m[ERROR] Unable to create XLSX file: {e}\033[0m")
         return
 
-        
-# Define a function to convert an image to an XLSX file
-def Image_to_xlsx(src, output_folder):
-    print("\033[94m[INFO] Accessing image folder...\033[0m")
-    file_name = src
-    src = f'./images/{src}'
-    # Check if src is None
-    if src is None:
-        print("Error: src is None")
-        exit()
-    if not os.path.exists(src) or not os.path.isfile(src):
-        print("\033[91m[ERROR] Invalid file: {src}\033[0m")
-        exit()
+    
+
+
+def img_to_xlsx(img_path, output_folder):
+    print("\033[94m[INFO] Processing image...\033[0m")
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    img_name = os.path.basename(img_path)
+    output_filename = os.path.join(output_folder, f"{os.path.splitext(img_name)[0]}.xlsx")
 
     null_device = open(os.devnull, 'w')
     original_stdout = sys.stdout
     sys.stdout = null_device
 
-    # Instantiation of OCR
     try:
-        oc =TesseractOCR(n_threads=4, lang="eng")
-        print(f"\033[92m[INFO] Instantiated OCR with {oc.n_threads} threads and language {oc.lang}\033[0m")
+        ocr_instance = TesseractOCR(n_threads=4, lang="eng")
+        print(f"\033[92m[INFO] Instantiated OCR with {ocr_instance.n_threads} threads and language {ocr_instance.lang}\033[0m")
     except Exception as e:
         print(f"\033[91m[ERROR] Unable to instantiate OCR: {e}\033[0m")
         sys.stdout = original_stdout
         null_device.close()
         return
 
-    # Instantiation of document, either an image or a PDF
     try:
-        doc = Image(src)
-        print(f"\033[92m[INFO] Instantiated document from image: {src}\033[0m")
+        img_doc = Image(img_path)
+        print(f"\033[92m[INFO] Instantiated document from image: {img_path}\033[0m")
     except Exception as e:
         print(f"\033[91m[ERROR] Unable to instantiate document: {e}\033[0m")
         sys.stdout = original_stdout
         null_device.close()
         return
 
-    # Table extraction
     try:
-        extracted_tables = doc.extract_tables(ocr=oc,
+        extracted_tables = img_doc.extract_tables(ocr=ocr_instance,
                                               implicit_rows=False,
                                               borderless_tables=False,
                                               min_confidence=50)
@@ -171,8 +155,7 @@ def Image_to_xlsx(src, output_folder):
     for table in extracted_tables:
         df = table.df
         print(f"\033[92m[INFO] Processing table {table_count} of {len(extracted_tables)}\033[0m")
-        # Call split_finish_column for each table
-        # Check if the first column is consistent, if so, use it as column names
+
         if len(df) > 1 and df.iloc[0, 0] == df.iloc[1, 0] and df.iloc[0, 0] is not None:
             if '\n' in df[0][0]:
                 columns = (df[0][0]).split('\n')
@@ -180,17 +163,9 @@ def Image_to_xlsx(src, output_folder):
                 columns = [df[0][0]] + [None] * (len(df.columns) - 1)
         else:
             columns = False
-        
-        
-        
 
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
-        filename_without_extension = os.path.splitext(file_name)[0]
-        output_filename = f"./{output_folder}/{filename_without_extension}_table_{table_count}.xlsx"
-        print(f"\033[92m[INFO] Saving table {table_count} to: {output_filename}\033[0m")
         try:
-            df_to_xlsx(table.df, columns, output_filename)
+            df_to_xlsx(df, columns, output_filename)
         except Exception as e:
             print(f"\033[91m[ERROR] Unable to create XLSX file: {e}\033[0m")
             continue
@@ -202,27 +177,23 @@ def Image_to_xlsx(src, output_folder):
 
     print("\033[92m[INFO] Image processing completed!\033[0m")
 
-    
-    
 if __name__ == "__main__":
-    # variables
-    image_folder = 'images'
+    img_folder = 'images'
     output_folder='output'
-    input_file='./Input/Von Price Book Feb 13 to Jun 23.pdf'
+    pdf_location='./Input/Von Price Book Feb 13 to Jun 23.pdf'
 
     print("\033[94m[INFO] Starting script execution...\033[0m")
     start_time = time.time()
 
-    pdf_to_Img(image_folder,input_file)
+    pdf_to_img_folder(pdf_location, img_folder)
+    for img_name in os.listdir(img_folder):
+        if img_name.endswith(".png") or img_name.endswith(".jpg") or img_name.endswith(".jpeg"):
+            img_path = os.path.join(img_folder, img_name)
+            print(f"\033[94m[INFO] Processing image: {img_name}\033[0m")
+            img_to_xlsx(img_path, output_folder)
 
-    for filename in os.listdir(image_folder):
-        if filename.endswith(".png") or filename.endswith(".jpg") or filename.endswith(".jpeg"):
-            file_location = os.path.join(image_folder, filename)
-            print(f"\033[94m[INFO] Processing image: {filename}\033[0m")
-            Image_to_xlsx(filename,output_folder)
-
-    if os.path.exists(image_folder):
-        shutil.rmtree(image_folder)
+    if os.path.exists(img_folder):
+        shutil.rmtree(img_folder)
 
     end_time = time.time()
     print(f"\033[92m[INFO] Script execution completed successfully in {end_time - start_time:.2f} seconds!\033[0m")
